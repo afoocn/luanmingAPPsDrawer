@@ -1,6 +1,7 @@
 # 峦鸣抽屉 (luanmingAPPsDrawer)
 
-轻量抽屉 + 集合分组 + 快捷方式外发 + Icon Pack 总线
+一个把 App 分类收进「悬浮抽屉」的安卓启动器增强工具：通过手势软件的shortcut，从任意界面拉出抽屉。
+轻量抽屉 + 集合分组 + 快捷方式pin到桌面 + Icon Pack 总线
 
 ## 功能
 
@@ -12,7 +13,7 @@
 ### 2. 桌面快捷方式
 - 集合可 pin 到系统桌面，生成一个图标
 - 点击桌面图标 = 打开该集合
-- 支持 Android 8.0+ 的 ShortcutManager 和旧版 INSTALL_SHORTCUT
+- 支持 Android 11.0+ 的 ShortcutManager 和旧版 INSTALL_SHORTCUT
 
 ### 3. 外部调用
 其他 APP 可通过 Intent 唤起某个集合：
@@ -32,7 +33,7 @@ startActivity(intent)
 ## 安装
 
 ```
-adb install 峦鸣抽屉-v2.11.apk
+adb install luanmingAPPsDrawer-v2.11.apk
 ```
 
 或直接将 APK 传到手机点击安装。
