@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹窗卡片从底部滑入，伴随缩放和透明度 -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_quint">
+
+    <translate
+        android:duration="280"
+        android:fromYDelta="20%p"
+        android:toYDelta="0" />
+
+    <alpha
+        android:duration="220"
+        android:fromAlpha="0"
+        android:toAlpha="1" />
+
+    <scale
+        android:duration="280"
+        android:fromXScale="0.92"
+        android:fromYScale="0.92"
+        android:toXScale="1.0"
+        android:toYScale="1.0"
+        android:pivotX="50%"
+        android:pivotY="50%" />
+
+</set>

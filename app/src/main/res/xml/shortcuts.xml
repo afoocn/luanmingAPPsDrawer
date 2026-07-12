@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="open_app"
+        android:enabled="true"
+        android:icon="@drawable/ic_settings"
+        android:shortcutShortLabel="@string/app_name">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.fengnian.folderdrawer"
+            android:targetClass="com.fengnian.folderdrawer.MainActivity" />
+    </shortcut>
+</shortcuts>

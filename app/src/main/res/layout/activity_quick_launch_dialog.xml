@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#00000000">
+
+    <!-- 居中/底部的内容卡片（背景作用于卡片本身，卡片外全透明） -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/contentCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:alpha="0"
+        app:cardBackgroundColor="@color/surface"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:contentPadding="0dp">
+
+        <!-- 磨砂背景层：显示模糊壁纸（仅在开启磨砂时可见）
+             match_parent 高度自动跟随卡片内容高度 -->
+        <ImageView
+            android:id="@+id/blurBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <!-- 颜色叠加层：半透明背景色（仅在开启磨砂时可见）
+             match_parent 高度自动跟随卡片内容高度 -->
+        <View
+            android:id="@+id/colorOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <!-- 噪点纹理层：iOS 毛玻璃的细颗粒感
+             match_parent 高度自动跟随卡片内容高度 -->
+        <View
+            android:id="@+id/noiseOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/noise_texture"
+            android:visibility="gone" />
+
+        <!-- 内容区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="0dp"
+            android:paddingBottom="12dp">
+
+            <!-- 标签页 -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/collectionTabs"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                app:tabIndicatorColor="@color/on_surface"
+                app:tabIndicatorHeight="2dp"
+                app:tabMode="scrollable"
+                app:tabTextColor="@color/on_surface_variant"
+                app:tabSelectedTextColor="@color/on_surface" />
+
+            <!-- 标题区域（可隐藏） -->
+            <LinearLayout
+                android:id="@+id/titleContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/collectionName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="6"
+                    android:textColor="@color/on_surface"
+                    android:textSize="16sp"
+                    tools:text="Home" />
+            </LinearLayout>
+
+            <!-- 应用图标网格（双层叠加，用于左右滑切换的交叉滑动动画） -->
+            <FrameLayout
+                android:id="@+id/swapContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipChildren="false">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/appsRecycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/appsRecyclerB"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alpha="0"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:visibility="invisible" />
+
+            </FrameLayout>
+
+            <!-- 空状态提示 -->
+            <TextView
+                android:id="@+id/emptyHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp"
+                android:layout_gravity="center"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
+                android:text="抽屉为空"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+
+</FrameLayout>

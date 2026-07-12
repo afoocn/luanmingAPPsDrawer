@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_export"
+        android:title="@string/export_config"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_import"
+        android:title="@string/import_config"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_settings"
+        android:title="全局设置"
+        app:showAsAction="never" />
+</menu>

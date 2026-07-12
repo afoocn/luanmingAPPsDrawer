@@ -1,0 +1,30 @@
+# ===== 签名密钥（绝不可入库，泄露等于别人能冒名发布你的 App）=====
+drawer.keystore
+*.keystore
+*.jks
+
+# ===== 本地 SDK / 环境路径 =====
+local.properties
+
+# ===== 编译产物 =====
+/build/
+/app/build/
+.gradle/
+**/build/
+
+# ===== IDE 缓存 =====
+.idea/
+*.iml
+captures/
+
+# ===== 日志与临时文件 =====
+build_err*.txt
+build_log*.txt
+*.log
+
+# ===== 大文件 / 录屏（不放仓库）=====
+*.apk
+新建文件夹/
+
+# ===== 无用临时脚本（引用了不存在的路径，无复用价值）=====
+temp_regenerate_icons.py

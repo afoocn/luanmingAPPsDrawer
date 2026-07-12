@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Pre-Oreo shortcut install -->
+    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+
+    <!-- List installed apps -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CollectionDrawer"
+        tools:targetApi="34">
+
+        <!-- 主界面：集合管理列表（通过"管理抽屉"快捷方式进入） -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CollectionDrawer">
+        </activity>
+
+        <!-- 快速启动弹窗（桌面快捷方式 / 应用内点击时弹出的简洁卡片）
+             标准启动模式 + 继承应用 taskAffinity：从应用内启动时复用宿主 task，
+             状态栏不重绘 -> 不闪；从桌面快捷方式启动仍正常（背后是桌面）。 -->
+        <activity
+            android:name=".QuickLaunchDialogActivity"
+            android:exported="false"
+            android:launchMode="standard"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.CollectionDrawer.Translucent" />
+
+        <!-- App picker: select installed apps to add -->
+        <activity
+            android:name=".AppPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
+        <!-- Collection edit: create / rename / recolor -->
+        <activity
+            android:name=".CollectionEditActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
+        <!-- Icon pack selector -->
+        <activity
+            android:name=".IconPackListActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
+        <!-- Icon picker: pick an icon from active icon pack -->
+        <activity
+            android:name=".IconPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
+        <!-- 全局弹窗设置 -->
+        <activity
+            android:name=".GlobalDialogSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
+        <!-- 应用图标入口：自动打开第一个抽屉（无抽屉时跳转管理列表） -->
+        <activity
+            android:name=".CollectionLauncherActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.CollectionDrawer.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- 静态快捷方式："管理抽屉" → MainActivity -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+            <intent-filter>
+                <action android:name="com.fengnian.folderdrawer.LAUNCH_COLLECTION" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- 旧版快捷方式创建入口：兼容 MyGesture 等手势软件的 ACTION_CREATE_SHORTCUT -->
+        <activity
+            android:name=".CreateShortcutActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.CollectionDrawer">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.CollectionDrawer" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- 颜色 -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnBackground">@color/on_background</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+
+        <!-- 状态栏：透明 + 自适应图标 -->
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
+        <!-- 按钮样式 -->
+        <item name="materialButtonStyle">@style/Widget.CollectionDrawer.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.CollectionDrawer.Button.Outlined</item>
+
+        <!-- 卡片 -->
+        <item name="materialCardViewStyle">@style/Widget.CollectionDrawer.Card</item>
+    </style>
+
+    <style name="Theme.CollectionDrawer.Translucent" parent="Theme.CollectionDrawer">
+        <!-- 浮动窗口：窗口只覆盖卡片大小（宽度=屏宽-2*边距，高度=内容自适应），
+             状态栏区域保持宿主（MainActivity / 桌面）的，本窗口不重绘 -> 不闪。
+             window.setBackgroundBlurRadius 只磨砂「窗口背后那块」=卡片，屏幕其余正常显示。 -->
+        <item name="android:windowIsTranslucent">true</item>
+        <!-- @null 彻底移除 windowBackground，避免启动瞬间白色闪烁 -->
+        <item name="android:windowBackground">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <!-- 卡片外完全透明（点外面关闭用 FLAG_WATCH_OUTSIDE_TOUCH），不加系统暗色遮罩 -->
+        <item name="android:backgroundDimEnabled">false</item>
+        <!-- 禁用系统窗口动画：只有卡片自身做 view-level 动画 -->
+        <item name="android:windowAnimationStyle">@null</item>
+        <!-- 禁用窗口预览（starting window），避免启动时闪屏 -->
+        <item name="android:windowDisablePreview">true</item>
+        <!-- 状态栏/导航栏透出宿主（透明 + 浅色图标），本窗口不重绘 -> 不闪 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <!-- 禁用 Android 12+ SplashScreen -->
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@null</item>
+        <item name="android:windowSplashScreenAnimationDuration" tools:targetApi="s">0</item>
+    </style>
+
+    <!-- 路由 Activity 专用：完全无窗口，不触发任何系统 UI 变化 -->
+    <style name="Theme.CollectionDrawer.NoDisplay" parent="Theme.CollectionDrawer">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <!-- 禁用 Android 12+ SplashScreen -->
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@null</item>
+        <item name="android:windowSplashScreenAnimationDuration" tools:targetApi="s">0</item>
+    </style>
+
+    <!-- ===== 通用按钮：圆角胶囊 ===== -->
+    <style name="Widget.CollectionDrawer.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">28dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:minHeight">56dp</item>
+    </style>
+
+    <style name="Widget.CollectionDrawer.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">28dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="strokeColor">@color/outline</item>
+    </style>
+
+    <style name="Widget.CollectionDrawer.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <!-- ===== 卡片 ===== -->
+    <style name="Widget.CollectionDrawer.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <!-- ===== FAB ===== -->
+    <style name="Widget.CollectionDrawer.Fab" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="tint">@color/on_primary</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.CollectionDrawer.Fab</item>
+    </style>
+
+    <style name="ShapeAppearance.CollectionDrawer.Fab" parent="">
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- ===== Toolbar ===== -->
+    <style name="Widget.CollectionDrawer.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="titleTextColor">?attr/colorOnSurface</item>
+        <item name="navigationIconTint">?attr/colorOnSurface</item>
+        <item name="iconTint">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- ===== Tab 文本 ===== -->
+    <style name="TextAppearance.CollectionDrawer.Tab" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- ===== 弹窗卡片圆角（用于 ShapeableImageView 圆角裁剪） ===== -->
+    <style name="ShapeAppearance.CollectionDrawer.DialogCard" parent="">
+        <item name="cornerSize">20dp</item>
+    </style>
+</resources>

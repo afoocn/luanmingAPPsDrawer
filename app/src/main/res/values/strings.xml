@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">峦鸣抽屉</string>
+    <string name="shortcut_manage">管理抽屉</string>
+    <string name="shortcut_manage_long">打开抽屉管理界面</string>
+    <string name="collections_title">峦鸣抽屉</string>
+    <string name="add_new_collection">添加新抽屉</string>
+    <string name="place_on_home_screen">发送到桌面</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="pin_to_home">发送到桌面</string>
+    <string name="more_options">更多</string>
+    <string name="search">搜索</string>
+
+    <string name="confirm_delete_title">删除抽屉</string>
+    <string name="confirm_delete_message">确定要删除「%1$s」吗？此操作不可撤销。</string>
+    <string name="confirm_delete_collection">确定要删除这个抽屉吗？此操作不可撤销。</string>
+    <string name="cannot_delete_default">默认抽屉不可删除</string>
+
+    <string name="shortcut_pinning">正在发送到桌面…</string>
+    <string name="shortcut_pin_failed">发送失败，请检查桌面启动器是否支持</string>
+
+    <string name="icon_pack_title">选择图标主题</string>
+    <string name="no_icon_pack">未发现已安装的图标主题</string>
+    <string name="default_icon">默认（系统图标）</string>
+
+    <string name="search_apps">搜索应用</string>
+    <string name="add_apps">添加</string>
+    <string name="icon_pack">图标主题</string>
+    <string name="edit_collection">编辑抽屉</string>
+    <string name="delete_collection">删除抽屉</string>
+    <string name="coll_blue">蓝</string>
+
+    <!-- 抽屉配置备份/恢复 -->
+    <string name="backup_title">抽屉配置备份</string>
+    <string name="export_config">导出抽屉配置</string>
+    <string name="import_config">恢复抽屉配置</string>
+    <string name="export_success">已导出到：%1$s</string>
+    <string name="export_failed">导出失败：%1$s</string>
+    <string name="import_success">成功恢复 %1$d 个抽屉</string>
+    <string name="import_failed">恢复失败：%1$s</string>
+    <string name="import_confirm_title">确认恢复</string>
+    <string name="import_confirm_message">恢复后将覆盖现有 %1$d 个抽屉配置，是否继续？</string>
+    <string name="import_overwrite">覆盖恢复</string>
+</resources>
