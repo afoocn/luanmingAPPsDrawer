@@ -1,4 +1,4 @@
-# 丰年抽屉 (CollectionDrawer)
+# 峦鸣抽屉 (luanmingAPPsDrawer)
 
 轻量抽屉 + 集合分组 + 快捷方式外发 + Icon Pack 总线
 
@@ -32,7 +32,7 @@ startActivity(intent)
 ## 安装
 
 ```
-adb install 丰年抽屉-v1.0.apk
+adb install 峦鸣抽屉-v2.11.apk
 ```
 
 或直接将 APK 传到手机点击安装。
@@ -41,8 +41,8 @@ adb install 丰年抽屉-v1.0.apk
 
 | 项目 | 值 |
 |------|------|
-| 包名 | com.fengnian.drawer |
-| minSdk | 21 (Android 5.0) |
+| 包名 | com.fengnian.folderdrawer |
+| minSdk | 30 (Android 11.0) |
 | targetSdk | 34 (Android 14) |
 | 架构 | MVVM + Room |
 | UI | Material Design 3 |
