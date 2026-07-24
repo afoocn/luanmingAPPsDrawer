@@ -1,4 +1,4 @@
-# 峦鸣抽屉 (luanmingAPPsDrawer)
+# 峦鸣抽屉 (luanmingAPPsDrawer) AI编程第一弹
 
 一个把 App 分类收进「悬浮抽屉」的安卓启动器增强工具：通过手势软件的shortcut，从任意界面拉出抽屉。
 轻量抽屉 + 集合分组 + 快捷方式pin到桌面 + Icon Pack 总线
