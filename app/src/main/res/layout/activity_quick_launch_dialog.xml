@@ -63,11 +63,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:background="@android:color/transparent"
-                app:tabIndicatorColor="@color/on_surface"
+                app:tabIndicatorColor="@color/tab_selected_text"
                 app:tabIndicatorHeight="2dp"
                 app:tabMode="scrollable"
                 app:tabTextColor="@color/on_surface_variant"
-                app:tabSelectedTextColor="@color/on_surface" />
+                app:tabSelectedTextColor="@color/tab_selected_text" />
 
             <!-- 标题区域（可隐藏） -->
             <LinearLayout
