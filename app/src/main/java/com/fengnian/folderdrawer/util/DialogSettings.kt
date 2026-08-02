@@ -29,6 +29,31 @@ object DialogSettings {
     // ── 标签页高度 ──
     const val KEY_TAB_HEIGHT_DP = "tab_height_dp"     // dp
 
+    // ── APP Dialer（拨号盘快速启动）──
+    const val KEY_DIALER_ENABLED = "dialer_enabled"     // Boolean, 默认 true（主界面卡片与功能总开关）
+    const val KEY_KEYBOARD_MODE = "keyboard_mode"     // "t9" / "qwerty", 默认 "t9"
+    const val KEY_DIALER_REMEMBER_RESULT = "dialer_remember_result"  // Boolean, 默认 true（打开时恢复上次搜索结果）
+    const val KEY_DIALER_LAST_QUERY = "dialer_last_query"   // String, 默认 ""（上次搜索词，供记录上次结果使用）
+    const val KEY_DIALER_INPUT_HEIGHT = "dialer_input_height"     // dp, 默认 44（输入栏高度）
+    const val KEY_DIALER_RESULT_HEIGHT = "dialer_result_height"  // dp, 默认 64（结果区高度）
+    const val KEY_DIALER_PER_PAGE = "dialer_per_page"          // 每页应用数, 默认 5
+    const val KEY_DIALER_ICON_SIZE = "dialer_icon_size"        // dp, 默认 42（图标大小）
+    const val KEY_DIALER_NAME_SIZE = "dialer_name_size"        // sp, 默认 11（名称字号）
+    const val KEY_DIALER_NAME_COLOR = "dialer_name_color"      // Int 0=自动, 默认 0（名称颜色）
+    const val KEY_DIALER_SHOW_NAME = "dialer_show_name"        // Boolean, 默认 true（显示名称）
+    const val KEY_DIALER_NAME_SINGLE_LINE = "dialer_name_single_line" // Boolean, 默认 false（名称单行）
+    const val KEY_DIALER_SHORTCUT_ICON = "dialer_shortcut_icon"  // String, 默认 ""（自定义桌面快捷方式图标 drawable 名；空=默认键盘图标）
+
+    // ── APP Dialer 独立于全局弹窗的尺寸配置 ──
+    const val KEY_DIALER_MARGIN_H = "dialer_margin_horizontal"   // dp, 默认 28（弹窗水平边距，独立于全局）
+    const val KEY_DIALER_KEY_HEIGHT = "dialer_key_height"        // dp, 默认 48（按键高度）
+    const val KEY_DIALER_KEY_WIDTH = "dialer_key_width"          // dp, 默认 0（0=自适应填满；>0 为固定宽度）
+    const val KEY_DIALER_KEY_ROW_SPACING = "dialer_key_row_spacing" // dp, 默认 5（按键行间距）
+    const val KEY_DIALER_KEY_COL_SPACING = "dialer_key_col_spacing" // dp, 默认 8（按键列间距）
+
+    // ── 崩溃报告 ──
+    const val KEY_CRASH_REPORT = "crash_report"       // Boolean, 默认 true
+
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -49,6 +74,82 @@ object DialogSettings {
     fun getAnimDuration(ctx: Context): Int = prefs(ctx).getInt(KEY_ANIM_DURATION, 300)
 
     fun getTabHeightDp(ctx: Context): Int = prefs(ctx).getInt(KEY_TAB_HEIGHT_DP, 40)
+
+    // ── APP Dialer ──
+
+    /** 总开关：是否启用 APP Dialer（主界面卡片与功能） */
+    fun isDialerEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DIALER_ENABLED, true)
+    fun setDialerEnabled(ctx: Context, v: Boolean) =
+        prefs(ctx).edit().putBoolean(KEY_DIALER_ENABLED, v).apply()
+
+    /** 自定义桌面快捷方式图标（图标包 drawable 名）；空串=默认键盘图标 */
+    fun getDialerShortcutIconName(ctx: Context): String = prefs(ctx).getString(KEY_DIALER_SHORTCUT_ICON, "") ?: ""
+    fun setDialerShortcutIconName(ctx: Context, v: String) =
+        prefs(ctx).edit().putString(KEY_DIALER_SHORTCUT_ICON, v).apply()
+
+    /** 键盘模式：返回 "t9" 或 "qwerty" */
+    fun getKeyboardMode(ctx: Context): String {
+        val v = prefs(ctx).getString(KEY_KEYBOARD_MODE, "t9") ?: "t9"
+        return if (v == "qwerty") "qwerty" else "t9"
+    }
+    fun setKeyboardMode(ctx: Context, v: String) =
+        prefs(ctx).edit().putString(KEY_KEYBOARD_MODE, if (v == "qwerty") "qwerty" else "t9").apply()
+
+    /** 是否记录上次结果：打开拨号盘时恢复上次搜索的 App（关闭则每次全新搜索、全量展示） */
+    fun isDialerRememberResult(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DIALER_REMEMBER_RESULT, true)
+    fun setDialerRememberResult(ctx: Context, v: Boolean) =
+        prefs(ctx).edit().putBoolean(KEY_DIALER_REMEMBER_RESULT, v).apply()
+
+    /** 上次拨号盘搜索词（供「记录上次结果」开关恢复使用） */
+    fun getDialerLastQuery(ctx: Context): String = prefs(ctx).getString(KEY_DIALER_LAST_QUERY, "") ?: ""
+    fun setDialerLastQuery(ctx: Context, v: String) =
+        prefs(ctx).edit().putString(KEY_DIALER_LAST_QUERY, v).apply()
+
+    // 输入栏高度 / 结果区高度 / 每页应用数 / 图标大小 / 名称字号 / 名称颜色 / 显示名称 / 名称单行
+    fun getDialerInputHeight(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_INPUT_HEIGHT, 44)
+    fun setDialerInputHeight(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_INPUT_HEIGHT, v).apply()
+
+    fun getDialerResultHeight(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_RESULT_HEIGHT, 64)
+    fun setDialerResultHeight(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_RESULT_HEIGHT, v).apply()
+
+    fun getDialerPerPage(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_PER_PAGE, 5)
+    fun setDialerPerPage(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_PER_PAGE, v).apply()
+
+    fun getDialerIconSize(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_ICON_SIZE, 42)
+    fun setDialerIconSize(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_ICON_SIZE, v).apply()
+
+    fun getDialerNameSize(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_NAME_SIZE, 11)
+    fun setDialerNameSize(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_NAME_SIZE, v).apply()
+
+    fun getDialerNameColor(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_NAME_COLOR, 0)
+    fun setDialerNameColor(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_NAME_COLOR, v).apply()
+
+    fun isDialerShowName(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DIALER_SHOW_NAME, true)
+    fun setDialerShowName(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean(KEY_DIALER_SHOW_NAME, v).apply()
+
+    fun isDialerNameSingleLine(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DIALER_NAME_SINGLE_LINE, false)
+    fun setDialerNameSingleLine(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean(KEY_DIALER_NAME_SINGLE_LINE, v).apply()
+
+    // —— 拨号盘独立尺寸 ——
+    fun getDialerMarginHorizontal(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_MARGIN_H, 28)
+    fun setDialerMarginHorizontal(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_MARGIN_H, v).apply()
+
+    fun getDialerKeyHeight(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_KEY_HEIGHT, 48)
+    fun setDialerKeyHeight(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_KEY_HEIGHT, v).apply()
+
+    fun getDialerKeyWidth(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_KEY_WIDTH, 0)
+    fun setDialerKeyWidth(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_KEY_WIDTH, v).apply()
+
+    fun getDialerKeyRowSpacing(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_KEY_ROW_SPACING, 5)
+    fun setDialerKeyRowSpacing(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_KEY_ROW_SPACING, v).apply()
+
+    fun getDialerKeyColSpacing(ctx: Context): Int = prefs(ctx).getInt(KEY_DIALER_KEY_COL_SPACING, 8)
+    fun setDialerKeyColSpacing(ctx: Context, v: Int) = prefs(ctx).edit().putInt(KEY_DIALER_KEY_COL_SPACING, v).apply()
+
+    // ── 崩溃报告 ──
+
+    fun isCrashReportEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_CRASH_REPORT, true)
+    fun setCrashReportEnabled(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean(KEY_CRASH_REPORT, v).apply()
 
     // ── 写入 ──
 

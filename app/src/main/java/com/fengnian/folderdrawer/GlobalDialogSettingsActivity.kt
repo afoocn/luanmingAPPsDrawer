@@ -18,6 +18,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.appcompat.widget.SwitchCompat
+import android.content.res.ColorStateList
 import androidx.lifecycle.lifecycleScope
 import com.fengnian.folderdrawer.data.BackupData
 import com.fengnian.folderdrawer.util.ColorPickerDialog
@@ -311,9 +313,37 @@ class GlobalDialogSettingsActivity : AppCompatActivity() {
     }
 
     private fun buildOtherSection() {
+        // ===== 弹窗标签页设置（原"标签页设置"，上移至 APP Dialer 之上并改名）=====
+        addSectionLabel("弹窗标签页设置")
+        val tabCard = addSectionCard()
+        addSeekBarRow(tabCard, "标签页高度", 28, 64, DialogSettings.getTabHeightDp(this), "dp") { DialogSettings.setTabHeightDp(this, it) }
+
+        // ===== APP Dialer（拨号盘快速启动）：总开关 + 专属设置入口 =====
+        // 详细设置已独立到 DialerSettingsActivity（主界面拨号盘卡片的铅笔按钮进入）。
+        addSectionLabel("APP Dialer（拨号盘快速启动）")
+        val dialerCard = addSectionCard()
+        // 总开关：关闭则隐藏主界面卡片、停用功能
+        addSwitchRow(dialerCard, "启用 APP Dialer", DialogSettings.isDialerEnabled(this)) {
+            DialogSettings.setDialerEnabled(this, it)
+        }
+        // 进入专属设置页
+        val openRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 12.dp2px(), 0, 4.dp2px())
+        }
+        openRow.addView(makeTextButton("打开 APP Dialer 设置") {
+            startActivity(Intent(this, DialerSettingsActivity::class.java))
+        })
+        dialerCard.addView(openRow)
+
+        // ===== 其他 =====
         addSectionLabel("其他")
         val card = addSectionCard()
-        addSeekBarRow(card, "标签页高度", 28, 64, DialogSettings.getTabHeightDp(this), "dp") { DialogSettings.setTabHeightDp(this, it) }
+
+        // 崩溃报告开关
+        addSwitchRow(card, "崩溃报告", DialogSettings.isCrashReportEnabled(this)) {
+            DialogSettings.setCrashReportEnabled(this, it)
+        }
 
         // 配置导入导出按钮
         val btnRow = LinearLayout(this).apply {
@@ -357,6 +387,48 @@ class GlobalDialogSettingsActivity : AppCompatActivity() {
         }
         btnRow.addView(importBtn)
         card.addView(btnRow)
+    }
+
+    /** 开关行（对齐其它设置项的样式） */
+    private fun addSwitchRow(parent: LinearLayout, label: String, current: Boolean, onChanged: (Boolean) -> Unit) {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 10.dp2px(), 0, 10.dp2px())
+        }
+        val labelTv = TextView(this).apply {
+            text = label
+            textSize = 15f
+            setTextColor(colorOnSurface)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        row.addView(labelTv)
+        val switch = SwitchCompat(this).apply {
+            isChecked = current
+            thumbTintList = ColorStateList.valueOf(colorPrimary)
+            trackTintList = ColorStateList.valueOf(adjustAlpha(colorPrimary, 0.4f))
+            setOnCheckedChangeListener { _, checked -> onChanged(checked) }
+        }
+        row.addView(switch)
+        parent.addView(row)
+    }
+
+    /** 通用描边文字按钮（用于「创建 Dialer 快捷方式」等） */
+    private fun makeTextButton(text: String, onClick: () -> Unit): TextView {
+        return TextView(this).apply {
+            this.text = text
+            textSize = 13f
+            setTextColor(colorPrimary)
+            gravity = Gravity.CENTER
+            setPadding(20.dp2px(), 10.dp2px(), 20.dp2px(), 10.dp2px())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 10.dp2px().toFloat()
+                setStroke(1.dp2px(), colorOutline)
+                setColor(Color.TRANSPARENT)
+            }
+            setOnClickListener { onClick() }
+        }
     }
 
     // ===== 导入导出 =====

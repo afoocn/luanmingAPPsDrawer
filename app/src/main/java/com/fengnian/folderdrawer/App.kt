@@ -2,6 +2,7 @@ package com.fengnian.folderdrawer
 
 import android.app.Application
 import android.util.Log
+import com.fengnian.folderdrawer.util.DialogSettings
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -17,6 +18,8 @@ class App : Application() {
     }
 
     private fun installCrashHandler() {
+        // 崩溃报告开关：关闭时不注册自定义 handler，沿用系统默认行为、不写本地文件
+        if (!DialogSettings.isCrashReportEnabled(this)) return
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {

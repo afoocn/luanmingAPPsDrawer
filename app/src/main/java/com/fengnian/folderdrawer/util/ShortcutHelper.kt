@@ -12,11 +12,14 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.fengnian.folderdrawer.CollectionLauncherActivity
+import com.fengnian.folderdrawer.DialerConstants
+import com.fengnian.folderdrawer.DialerLauncherActivity
 import com.fengnian.folderdrawer.data.Collection
 
 object ShortcutHelper {
@@ -34,7 +37,7 @@ object ShortcutHelper {
         val toPublish = collections.take(maxCount)
 
         val shortcuts = toPublish.map { collection ->
-            buildShortcutInfo(context, collection, iconPackManager)
+            buildShortcutInfo(context, collection, iconPackManager, adaptive = true)
         }
 
         ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
@@ -51,8 +54,13 @@ object ShortcutHelper {
     private fun buildShortcutInfo(
         context: Context,
         collection: Collection,
-        iconPackManager: com.fengnian.folderdrawer.iconpack.IconPackManager
+        iconPackManager: com.fengnian.folderdrawer.iconpack.IconPackManager,
+        adaptive: Boolean = false
     ): ShortcutInfoCompat {
+        // 特殊抽屉：APP Dialer（id=-2）走拨号盘图标与 intent，复用 CollectionLauncherActivity 链路
+        if (collection.id == DialerConstants.DIALER_COLLECTION_ID) {
+            return buildDialerShortcutInfo(context, adaptive)
+        }
         val launchIntent = Intent(context, CollectionLauncherActivity::class.java).apply {
             action = CollectionLauncherActivity.ACTION_LAUNCH_COLLECTION
             // 把 collection.id 编入 data URI：启动器不会丢弃 data，且能让各 shortcut 的
@@ -71,21 +79,24 @@ object ShortcutHelper {
         val customDrawable = collection.shortcutIconDrawable?.let {
             iconPackManager.getDrawableByName(it)
         }
+        // 圈色（自定义图标透明边距露出的兜底色）改为白色，避免露出主题主色；
+        // 仅当用户主动设置 iconColor 时，才以其作为整块图标底色。
+        val bgColor = if (collection.iconColor != 0) collection.iconColor else Color.WHITE
 
-        // API 26+: 使用 adaptive bitmap
-        // API < 26: 使用普?bitmap
-        // 使用 createWithBitmap 而非 createWithAdaptiveBitmap
-        // 原因：小米澎湃 OS 等系统会对 Adaptive Icon 自动套用蒙版裁剪，
-        // 如果图标透明区域或圆角小于系统底板圆角，会露出白色底板形成白边。
-        // Shortcut Maker 的做法：用完全不透明的位图 + createWithBitmap，
-        // 绕过系统的自适应图标处理，避免白边。
+        // 普通 createWithBitmap + 不透明方形位图（v2.29 处方，方形不裁圆）：
+        // 自适应图标（图标包）直接画满画布、不填额外主色；非自适应图标以主色兜底保证
+        // 完全不透明，再把图标画满整张画布（主色仅在图标本身透明处极小露出）。
+        // 这样保留图标原始方形/圆角方形状，不裁成圆形；"一圈颜色"被压到最薄。
+        // （曾试 createWithAdaptiveBitmap 触发更宽自适应蒙版、圆形裁剪改变形状，均不如本方案。）
         val icon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val bitmap = if (customDrawable != null) {
-                drawableToShortcutBitmap(customDrawable, context.resources.displayMetrics.density)
+                drawableToAdaptiveBitmap(customDrawable, bgColor, context.resources.displayMetrics.density)
             } else {
                 createAdaptiveHamburgerIcon(collection.iconColor)
             }
-            IconCompat.createWithBitmap(bitmap)
+            // 动态快捷方式（长按菜单）用自适应图标：启动器不再额外套圆形底色板，消除"背景色"；
+            // 桌面 pin 仍用普通位图（保持方形白圈处方）。
+            if (adaptive) IconCompat.createWithAdaptiveBitmap(bitmap) else IconCompat.createWithBitmap(bitmap)
         } else {
             val bitmap = if (customDrawable != null) {
                 drawableToLegacyBitmap(customDrawable)
@@ -104,76 +115,41 @@ object ShortcutHelper {
     }
 
     /**
-     * 将 Icon Pack 图标转为完全不透明的正方形位图
-     * 尺寸：108dp * density（精确匹配系统要求的物理像素）
-     * 背景：APP 主色 #C4704A 填充整个画布，不留任何透明区域
-     * 图标：居中缩放至安全区（72dp * density），直接绘制不做圆形裁剪
+     * 将 Icon Pack 图标转为完全不透明的圆形位图
+     * 尺寸：108dp * density。裁剪为圆形并填充底色兜底，
+     * 启动器套圆形蒙版时正好填满、无月牙底色；圆角方蒙版下圆形被裁也无底色。
+     */
+    /**
+     * 将 Icon Pack 图标转为完全不透明的方形位图（v2.29 处方，方形不裁圆）。
+     * 尺寸：108dp * density（精确匹配系统要求的物理像素）。
+     * - 自适应图标（AdaptiveIconDrawable）：其背景层本就铺满 bounds，直接画满整张画布，
+     *   不额外填主色，四角即图标包背景色，无"主色圈"。
+     * - 其它图标（如位图）：先填主色兜底保证不透明，再把图标画满整张画布
+     *   （不再缩进留边），主色仅在图标自身透明像素处极小露出，圈色最薄。
      */
     private fun drawableToAdaptiveBitmap(
-        drawable: android.graphics.drawable.Drawable,
+        drawable: Drawable,
         bgColor: Int,
         density: Float
     ): Bitmap {
-        // 108dp 对应物理像素 = 108 * density
         val size = (108f * density).toInt()
-        // 安全区 72dp，图标在安全区内居中缩放
-        val safeSize = (72f * density).toInt()
-
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // 填充 APP 主色背景，确保完全不透明
-        canvas.drawColor(bgColor)
-
-        // 图标居中缩放至安全区，不进行任何圆形裁剪
-        val iw = drawable.intrinsicWidth
-        val ih = drawable.intrinsicHeight
-
-        if (iw > 0 && ih > 0) {
-            val scale = safeSize.toFloat() / maxOf(iw, ih)
-            val sw = (iw * scale).toInt()
-            val sh = (ih * scale).toInt()
-            val left = (size - sw) / 2
-            val top = (size - sh) / 2
-            drawable.setBounds(left, top, left + sw, top + sh)
+        if (drawable is android.graphics.drawable.AdaptiveIconDrawable) {
+            // 自适应图标：背景铺满整张画布，天然不透明，无需额外加底色
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(canvas)
         } else {
-            val offset = (size - safeSize) / 2
-            drawable.setBounds(offset, offset, offset + safeSize, offset + safeSize)
+            // 兜底：填充主色保证不透明，图标画满整张画布（主色仅在透明像素处极小露出）
+            canvas.drawColor(bgColor)
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(canvas)
         }
-        drawable.draw(canvas)
 
         return bitmap
     }
 
-    /**
-     * 将用户自选图标转为透明背景的 shortcut 位图
-     * 尺寸 108dp × density，背景透明，图标居中缩放至安全区
-     */
-    private fun drawableToShortcutBitmap(
-        drawable: android.graphics.drawable.Drawable,
-        density: Float
-    ): Bitmap {
-        val size = (108f * density).toInt()
-        val safeSize = (96f * density).toInt()
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-
-        val iw = drawable.intrinsicWidth
-        val ih = drawable.intrinsicHeight
-        if (iw > 0 && ih > 0) {
-            val scale = safeSize.toFloat() / maxOf(iw, ih)
-            val sw = (iw * scale).toInt()
-            val sh = (ih * scale).toInt()
-            val left = (size - sw) / 2
-            val top = (size - sh) / 2
-            drawable.setBounds(left, top, left + sw, top + sh)
-        } else {
-            val offset = (size - safeSize) / 2
-            drawable.setBounds(offset, offset, offset + safeSize, offset + safeSize)
-        }
-        drawable.draw(canvas)
-        return bitmap
-    }
 
     /**
      * ?Icon Pack 图标转为旧版 bitmap?92x192，用?API < 26?     * 透明背景
@@ -317,5 +293,108 @@ object ShortcutHelper {
 
     fun isRequestPinShortcutSupported(context: Context): Boolean {
         return ShortcutManagerCompat.isRequestPinShortcutSupported(context)
+    }
+
+    /**
+     * 创建并钉「APP Dialer」快捷方式到桌面。
+     * 经 DialerLauncherActivity（NoDisplay）路由，data URI = folderdrawer://dialer。
+     */
+    fun pinDialerToHome(context: Context): Boolean {
+        val shortcut = buildDialerShortcutInfo(context)
+        return ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+    }
+
+    private fun buildDialerShortcutInfo(context: Context, adaptive: Boolean = false): ShortcutInfoCompat {
+        val launchIntent = Intent(context, CollectionLauncherActivity::class.java).apply {
+            action = CollectionLauncherActivity.ACTION_LAUNCH_COLLECTION
+            // 把语义编入 data URI：folderdrawer://collection/-2，复用普通抽屉的稳定路由链路
+            data = Uri.parse("${CollectionLauncherActivity.SCHEME}://${CollectionLauncherActivity.DATA_HOST}/${DialerConstants.DIALER_COLLECTION_ID}")
+            // 与普通抽屉的动态快捷方式保持一致：携带 EXTRA_COLLECTION_ID 并加 CLEAR_TOP，
+            // 避免部分手势/启动器软件因 Intent 结构不一致而在添加时卡死
+            putExtra(CollectionLauncherActivity.EXTRA_COLLECTION_ID, DialerConstants.DIALER_COLLECTION_ID)
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_NO_ANIMATION
+            )
+        }
+
+        val icon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && adaptive) {
+            IconCompat.createWithAdaptiveBitmap(getDialerShortcutIcon(context))
+        } else {
+            IconCompat.createWithBitmap(getDialerShortcutIcon(context))
+        }
+
+        return ShortcutInfoCompat.Builder(context, "dialer_main")
+            .setShortLabel("APP Dialer")
+            .setLongLabel("APP Dialer")
+            .setIcon(icon)
+            .setIntent(launchIntent)
+            .build()
+    }
+
+    /**
+     * 返回 Dialer 桌面快捷方式图标位图：
+     * 若用户在设置里自定义了图标（图标包 drawable 名），则像抽屉那样从图标包取图并渲染；
+     * 否则回退到内置的「九宫格键盘」图标。尺寸与抽屉快捷方式一致（Oreo+ 用 108dp 自适应位图，
+     * 旧系统用 192px 普通位图），避免部分软件处理超大 bitmap 时变慢/卡死。
+     */
+    fun getDialerShortcutIcon(context: Context): Bitmap {
+        val ipm = com.fengnian.folderdrawer.iconpack.IconPackManager.getInstance(context)
+        val name = com.fengnian.folderdrawer.util.DialogSettings.getDialerShortcutIconName(context)
+        val customDrawable = if (name.isNotBlank()) ipm.getDrawableByName(name) else null
+        val primary = context.getColor(com.fengnian.folderdrawer.R.color.primary)
+        val density = context.resources.displayMetrics.density
+        return if (customDrawable != null) {
+            // 自定义图标：圈色（图标透明边距）改为白色，避免露出主题主色
+            val bg = Color.WHITE
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                drawableToAdaptiveBitmap(customDrawable, bg, density)
+            } else {
+                drawableToLegacyBitmap(customDrawable)
+            }
+        } else {
+            // 内置九宫格图标：保持主色底，否则白色键盘图案在白底上不可见
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                createDialerIcon(primary, (108f * density).toInt())
+            } else {
+                createDialerIcon(primary, 192)
+            }
+        }
+    }
+
+    /**
+     * 生成一个「九宫格拨号键盘」图标位图（sizePx × sizePx，不透明背景），
+     * 用于 Dialer 快捷方式。绕过系统对自适应图标套蒙版导致的白边。
+     */
+    private fun createDialerIcon(bgColor: Int, sizePx: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        paint.color = bgColor
+        canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
+
+        paint.color = Color.WHITE
+        val pad = sizePx * 0.16f
+        val gridArea = sizePx - pad * 2
+        val cols = 3
+        val rows = 4
+        val cellW = gridArea / cols
+        val cellH = gridArea / rows
+        val cell = minOf(cellW, cellH) * 0.62f
+        val radius = cell * 0.22f
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                val cx = pad + c * cellW + cellW / 2f
+                val cy = pad + r * cellH + cellH / 2f
+                canvas.drawRoundRect(
+                    cx - cell / 2f, cy - cell / 2f,
+                    cx + cell / 2f, cy + cell / 2f,
+                    radius, radius, paint
+                )
+            }
+        }
+        return bitmap
     }
 }

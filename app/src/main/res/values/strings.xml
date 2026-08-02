@@ -16,6 +16,7 @@
 
     <string name="confirm_delete_title">删除抽屉</string>
     <string name="confirm_delete_message">确定要删除「%1$s」吗？此操作不可撤销。</string>
+    <string name="confirm_disable_dialer_message">是否关闭 APP Dialer 功能？</string>
     <string name="confirm_delete_collection">确定要删除这个抽屉吗？此操作不可撤销。</string>
     <string name="cannot_delete_default">默认抽屉不可删除</string>
 

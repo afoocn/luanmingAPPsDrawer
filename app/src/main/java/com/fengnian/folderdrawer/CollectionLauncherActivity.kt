@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.fengnian.folderdrawer.AppDialerActivity
+import com.fengnian.folderdrawer.DialerConstants
 import com.fengnian.folderdrawer.util.AutoDismissOnLock
 import com.fengnian.folderdrawer.viewmodel.CollectionViewModel
 
@@ -45,10 +47,15 @@ class CollectionLauncherActivity : AppCompatActivity() {
     }
 
     private fun launchCollection(collectionId: Long) {
-        val launchIntent = Intent(this, QuickLaunchDialogActivity::class.java).apply {
-            putExtra(QuickLaunchDialogActivity.EXTRA_COLLECTION_ID, collectionId)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        // 特殊 id -2：直接打开 APP Dialer 拨号盘（复用与普通抽屉相同的启动方式）
+        val launchIntent = if (collectionId == DialerConstants.DIALER_COLLECTION_ID) {
+            Intent(this, AppDialerActivity::class.java)
+        } else {
+            Intent(this, QuickLaunchDialogActivity::class.java).apply {
+                putExtra(QuickLaunchDialogActivity.EXTRA_COLLECTION_ID, collectionId)
+            }
         }
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
         startActivity(launchIntent)
         finish()
     }

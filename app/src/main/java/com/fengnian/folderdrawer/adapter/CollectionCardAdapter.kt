@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.fengnian.folderdrawer.R
+import com.fengnian.folderdrawer.DialerConstants
 import com.fengnian.folderdrawer.data.Collection
 import com.fengnian.folderdrawer.iconpack.IconPackManager
 import com.fengnian.folderdrawer.util.AppUtils
@@ -42,6 +43,7 @@ class CollectionCardAdapter(
         val appsPreview: LinearLayout = itemView.findViewById(R.id.appsPreview)
         val extraCount: TextView = itemView.findViewById(R.id.extraCount)
         val showInDialogSwitch: MaterialSwitch = itemView.findViewById(R.id.showInDialogSwitch)
+        val showInDialogRow: View = itemView.findViewById(R.id.showInDialogRow)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -52,12 +54,25 @@ class CollectionCardAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val collection = getItem(position)
+        val isDialer = collection.id == DialerConstants.DIALER_COLLECTION_ID
         holder.nameText.text = collection.name
 
         holder.itemView.setOnClickListener { onCollectionClick(collection) }
         holder.pinButton.setOnClickListener { onPinClick(collection) }
         holder.editButton.setOnClickListener { onEditClick(collection) }
         holder.deleteButton.setOnClickListener { onDeleteClick(collection) }
+
+        if (isDialer) {
+            // 特殊项：不能删除/排序、不可在弹窗内显示、无应用预览；
+            // 仅显示「钉桌面」与「铅笔（设置）」按钮。点击铅笔进入拨号盘专属设置页。
+            holder.editButton.visibility = View.VISIBLE
+            // 删除按钮：点击后弹「是否关闭 APP Dialer 功能」确认框（见 MainActivity.confirmDisableDialer）
+            holder.deleteButton.visibility = View.VISIBLE
+            holder.showInDialogRow.visibility = View.GONE
+            holder.appsPreview.visibility = View.GONE
+            holder.extraCount.visibility = View.GONE
+            return
+        }
 
         loadAppPreviews(holder, collection)
 
@@ -120,7 +135,9 @@ class CollectionCardAdapter(
 
     fun onItemMove(fromPosition: Int, toPosition: Int) {
         val list = currentList.toMutableList()
-        val moved = list.removeAt(fromPosition)
+        val moved = list[fromPosition]
+        if (moved.id == DialerConstants.DIALER_COLLECTION_ID) return  // 特殊项不可移动
+        list.removeAt(fromPosition)
         list.add(toPosition, moved)
         submitList(list)
         onMove?.invoke(fromPosition, toPosition)

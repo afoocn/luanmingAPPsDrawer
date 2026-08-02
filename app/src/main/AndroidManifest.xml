@@ -67,6 +67,12 @@
             android:exported="false"
             android:theme="@style/Theme.CollectionDrawer" />
 
+        <!-- APP Dialer 专属设置（从主界面拨号盘卡片的铅笔按钮进入） -->
+        <activity
+            android:name=".DialerSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CollectionDrawer" />
+
         <!-- 应用图标入口：自动打开第一个抽屉（无抽屉时跳转管理列表） -->
         <activity
             android:name=".CollectionLauncherActivity"
@@ -98,6 +104,31 @@
             android:theme="@style/Theme.CollectionDrawer">
             <intent-filter>
                 <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- APP Dialer 弹窗（T9 / QWERTY 拨号盘快速启动） -->
+        <activity
+            android:name=".AppDialerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.CollectionDrawer.Translucent" />
+
+        <!-- APP Dialer 路由入口：仅兼容早期桌面快捷方式（folderdrawer://dialer）；
+             新的快捷方式/手势软件入口统一走 CollectionLauncherActivity 的 folderdrawer://collection/-2，
+             以避免 NoDisplay 独立链路在部分 ROM 上调用假死 -->
+        <activity
+            android:name=".DialerLauncherActivity"
+            android:exported="true"
+            android:label="APP Dialer"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.CollectionDrawer.NoDisplay">
+            <intent-filter>
+                <action android:name="com.fengnian.folderdrawer.LAUNCH_DIALER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

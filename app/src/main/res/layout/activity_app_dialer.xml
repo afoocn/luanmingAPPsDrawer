@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#00000000">
+
+    <!-- 居中内容卡片（背景作用于卡片本身，卡片外全透明） -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/contentCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:alpha="0"
+        app:cardBackgroundColor="@color/surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:contentPadding="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp">
+
+            <!-- 输入显示：最上面，显示按了哪些键（清除已并入键盘删除键） -->
+            <TextView
+                android:id="@+id/inputDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:hint="按拨号键搜索应用"
+                android:textColor="@color/on_surface"
+                android:textColorHint="@color/on_surface_variant"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.15"
+                tools:text="932" />
+
+            <!-- 匹配结果：固定高度横向滚动（收窄，弹窗出来即占好高度） -->
+            <HorizontalScrollView
+                android:id="@+id/resultScroll"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:scrollbars="none">
+                <LinearLayout
+                    android:id="@+id/resultContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="2dp" />
+            </HorizontalScrollView>
+
+            <!-- 键盘容器（动态填充 T9 / QWERTY，3 行紧凑） -->
+            <LinearLayout
+                android:id="@+id/keyboardContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>
