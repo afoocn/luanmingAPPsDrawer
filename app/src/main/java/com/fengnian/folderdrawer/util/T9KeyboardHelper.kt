@@ -86,7 +86,7 @@ object T9KeyboardHelper {
         "t淘探腾听|" +
         "x携虾|" +
         "y映银|" +
-        "z招站在账"
+        "z招站在账宙"
 
     /** 汉字 -> 拼音首字母（运行时解析 RAW + RAW2 构建） */
     private val PINYIN_MAP: Map<Char, Char> by lazy {

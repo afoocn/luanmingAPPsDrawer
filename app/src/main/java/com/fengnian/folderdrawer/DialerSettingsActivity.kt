@@ -4,6 +4,8 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -48,6 +50,19 @@ class DialerSettingsActivity : AppCompatActivity() {
     private lateinit var iconPackManager: IconPackManager
     private var iconPreview: ImageView? = null
     private var iconLabel: TextView? = null
+
+    /** 图标尺寸变更后去抖重建缓存，避免拖动 seekbar 时频繁全量扫描 */
+    private val rebuildHandler = Handler(Looper.getMainLooper())
+    private val rebuildTask = Runnable {
+        if (DialogSettings.isDialerCacheEnabled(this@DialerSettingsActivity)) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    com.fengnian.folderdrawer.util.DialerCacheStore.rebuildAndSave(this@DialerSettingsActivity)
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
 
     private val iconPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -120,7 +135,11 @@ class DialerSettingsActivity : AppCompatActivity() {
         addSeekBarRow(card, "输入栏高度", 16, 80, DialogSettings.getDialerInputHeight(this), "dp") { DialogSettings.setDialerInputHeight(this, it) }
         addSeekBarRow(card, "结果区高度", 48, 200, DialogSettings.getDialerResultHeight(this), "dp") { DialogSettings.setDialerResultHeight(this, it) }
         addSeekBarRow(card, "每页应用数", 3, 12, DialogSettings.getDialerPerPage(this), "") { DialogSettings.setDialerPerPage(this, it) }
-        addSeekBarRow(card, "图标大小", 24, 96, DialogSettings.getDialerIconSize(this), "dp") { DialogSettings.setDialerIconSize(this, it) }
+        addSeekBarRow(card, "图标大小", 24, 96, DialogSettings.getDialerIconSize(this), "dp") {
+            DialogSettings.setDialerIconSize(this, it)
+            // 图标展示尺寸变化后，缓存的图标按旧尺寸生成会显得不完整，去抖后自动重建缓存
+            scheduleCacheRebuild()
+        }
         addSeekBarRow(card, "名称字号", 8, 22, DialogSettings.getDialerNameSize(this), "sp") { DialogSettings.setDialerNameSize(this, it) }
         addColorButton(card, "名称颜色", DialogSettings.getDialerNameColor(this)) { DialogSettings.setDialerNameColor(this, it) }
         addSwitchRow(card, "显示名称", DialogSettings.isDialerShowName(this)) { DialogSettings.setDialerShowName(this, it) }
@@ -159,6 +178,12 @@ class DialerSettingsActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) { DialerCacheStore.rebuildAndSave(this@DialerSettingsActivity) }
             Toast.makeText(this@DialerSettingsActivity, "缓存已更新", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /** 图标尺寸/外观变化后去抖重建缓存（拖 seekbar 时多次回调只重建一次） */
+    private fun scheduleCacheRebuild() {
+        rebuildHandler.removeCallbacks(rebuildTask)
+        rebuildHandler.postDelayed(rebuildTask, 800L)
     }
 
     private fun confirmClearCache() {

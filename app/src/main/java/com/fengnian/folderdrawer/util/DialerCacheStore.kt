@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable
 import com.fengnian.folderdrawer.data.AppDatabase
 import com.fengnian.folderdrawer.data.DialerAppCacheEntry
 import com.fengnian.folderdrawer.iconpack.IconPackManager
+import com.fengnian.folderdrawer.util.DialogSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -52,7 +53,7 @@ object DialerCacheStore {
                 pinyinFull = e.pinyinFull,
                 pinyinInitials = e.pinyinInitials,
                 labelLower = e.labelLower,
-                iconBlob = drawableToBytes(e.icon),
+                iconBlob = drawableToBytes(context, e.icon),
                 iconPackId = activePack
             )
         }
@@ -99,9 +100,13 @@ object DialerCacheStore {
         save(context, entries)
     }
 
-    private fun drawableToBytes(drawable: Drawable): ByteArray {
-        val scale = android.content.res.Resources.getSystem().displayMetrics.density
-        val size = (ICON_CACHE_DP * scale).toInt().coerceAtLeast(1)
+    private fun drawableToBytes(context: Context, drawable: Drawable): ByteArray {
+        val density = context.resources.displayMetrics.density
+        // 按用户设置的图标展示尺寸生成缓存位图（向上取整到 96dp 保证清晰度，封顶 192dp 控制体积），
+        // 这样缓存图标与当前「图标大小」设置一致，显示时 1:1 不失真、不放大。
+        val cfgDp = DialogSettings.getDialerIconSize(context)
+            .toFloat().coerceAtLeast(ICON_CACHE_DP.toFloat()).coerceAtMost(192f)
+        val size = (cfgDp * density).toInt().coerceAtLeast(1)
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         drawable.setBounds(0, 0, size, size)
@@ -115,6 +120,8 @@ object DialerCacheStore {
     private fun bytesToDrawable(context: Context, bytes: ByteArray): Drawable {
         val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        // 修正位图密度，使 BitmapDrawable 与设备密度 1:1，显示缩放像素精确、不被二次拉伸
+        bmp.density = context.resources.displayMetrics.densityDpi
         return BitmapDrawable(context.resources, bmp)
     }
 }
