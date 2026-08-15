@@ -8,14 +8,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
- entities = [Collection::class, AppItem::class],
- version = 13,
+ entities = [Collection::class, AppItem::class, DialerAppCacheEntry::class],
+ version = 14,
  exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
  abstract fun collectionDao(): CollectionDao
  abstract fun appItemDao(): AppItemDao
+ abstract fun dialerCacheDao(): DialerCacheDao
 
  companion object {
  @Volatile
@@ -46,6 +47,24 @@ abstract class AppDatabase : RoomDatabase() {
      }
  }
 
+ private val MIGRATION_13_14 = object : Migration(13, 14) {
+     override fun migrate(db: SupportSQLiteDatabase) {
+         db.execSQL(
+             """CREATE TABLE IF NOT EXISTS dialer_app_cache (
+                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                 package_name TEXT NOT NULL,
+                 activity_name TEXT NOT NULL,
+                 label TEXT NOT NULL,
+                 pinyin_full TEXT NOT NULL,
+                 pinyin_initials TEXT NOT NULL,
+                 label_lower TEXT NOT NULL,
+                 icon_blob BLOB NOT NULL,
+                 icon_pack_id TEXT NOT NULL
+             )"""
+         )
+     }
+ }
+
  fun get(context: Context): AppDatabase {
  return instance ?: synchronized(this) {
  instance ?: Room.databaseBuilder(
@@ -53,7 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
  AppDatabase::class.java,
  "collection_drawer.db"
  )
- .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+ .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
  .fallbackToDestructiveMigration()
  .build()
  .also { instance = it }

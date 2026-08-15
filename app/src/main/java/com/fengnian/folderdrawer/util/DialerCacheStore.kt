@@ -1,0 +1,120 @@
+package com.fengnian.folderdrawer.util
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import com.fengnian.folderdrawer.data.AppDatabase
+import com.fengnian.folderdrawer.data.DialerAppCacheEntry
+import com.fengnian.folderdrawer.iconpack.IconPackManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+
+/**
+ * APP Dialer 已装应用的持久化缓存管理。
+ *
+ * 与 AppDialerActivity 里的进程内存缓存 [com.fengnian.folderdrawer.AppDialerActivity] 不同，
+ * 这里把「包名/activity/名称/拼音/图标位图」落盘到 Room 表 dialer_app_cache，
+ * 进程被杀后下次打开仍可秒显，免去逐个读 PackageManager、套图标包、算拼音的耗时。
+ */
+object DialerCacheStore {
+
+    /** 图标缓存尺寸（dp），足够清晰且体积可控 */
+    private const val ICON_CACHE_DP = 96
+
+    /**
+     * 全量构建可搜索条目：读取已装应用、套用当前激活图标包、计算拼音键。
+     * 与 AppDialerActivity.loadApps 后台刷新逻辑一致，集中在此便于复用。
+     */
+    suspend fun buildEntries(context: Context): List<AppSearchEntry> = withContext(Dispatchers.IO) {
+        val iconPm = IconPackManager.getInstance(context)
+        AppUtils.getInstalledApps(context).map { ia ->
+            val keys = T9KeyboardHelper.buildSearchKeys(ia.label)
+            val themedIcon = iconPm.getIcon(ia.packageName, ia.activityName, ia.label) ?: ia.icon
+            AppSearchEntry(
+                ia.packageName, ia.activityName, ia.label, themedIcon,
+                keys.first, keys.second, keys.third
+            )
+        }
+    }
+
+    /** 把内存条目写盘：清空旧表后整表插入，并记录当前激活图标包 id 用于失效判断 */
+    suspend fun save(context: Context, entries: List<AppSearchEntry>) = withContext(Dispatchers.IO) {
+        val activePack = IconPackManager.getInstance(context).getActiveIconPack() ?: ""
+        val rows = entries.map { e ->
+            DialerAppCacheEntry(
+                packageName = e.packageName,
+                activityName = e.activityName,
+                label = e.label,
+                pinyinFull = e.pinyinFull,
+                pinyinInitials = e.pinyinInitials,
+                labelLower = e.labelLower,
+                iconBlob = drawableToBytes(e.icon),
+                iconPackId = activePack
+            )
+        }
+        val dao = AppDatabase.get(context).dialerCacheDao()
+        dao.clear()
+        dao.insertAll(rows)
+    }
+
+    /**
+     * 读盘还原条目。返回 null 表示缓存为空（需实时构建）。
+     * 图标 Blob 解码为 BitmapDrawable 还原。
+     */
+    suspend fun load(context: Context): List<AppSearchEntry>? = withContext(Dispatchers.IO) {
+        val rows = AppDatabase.get(context).dialerCacheDao().getAll()
+        if (rows.isEmpty()) return@withContext null
+        rows.map { r ->
+            AppSearchEntry(
+                r.packageName, r.activityName, r.label,
+                bytesToDrawable(context, r.iconBlob),
+                r.pinyinFull, r.pinyinInitials, r.labelLower
+            )
+        }
+    }
+
+    /** 清空磁盘缓存 */
+    suspend fun clear(context: Context) = withContext(Dispatchers.IO) {
+        AppDatabase.get(context).dialerCacheDao().clear()
+    }
+
+    /**
+     * 缓存是否失效：空表，或记录时的图标包与当前激活图标包不一致（换包后旧图标应刷新）。
+     */
+    suspend fun isStale(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val dao = AppDatabase.get(context).dialerCacheDao()
+        if (dao.count() == 0) return@withContext true
+        val storedPack = dao.storedIconPackId() ?: ""
+        val activePack = IconPackManager.getInstance(context).getActiveIconPack() ?: ""
+        storedPack != activePack
+    }
+
+    /** 便捷：全量重建并写盘（供「更新缓存」按钮与系统包变化广播调用） */
+    suspend fun rebuildAndSave(context: Context) {
+        val entries = buildEntries(context)
+        save(context, entries)
+    }
+
+    private fun drawableToBytes(drawable: Drawable): ByteArray {
+        val scale = android.content.res.Resources.getSystem().displayMetrics.density
+        val size = (ICON_CACHE_DP * scale).toInt().coerceAtLeast(1)
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        val stream = ByteArrayOutputStream()
+        bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        bmp.recycle()
+        return stream.toByteArray()
+    }
+
+    private fun bytesToDrawable(context: Context, bytes: ByteArray): Drawable {
+        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        return BitmapDrawable(context.resources, bmp)
+    }
+}

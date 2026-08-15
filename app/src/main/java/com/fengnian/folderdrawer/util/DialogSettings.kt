@@ -43,6 +43,7 @@ object DialogSettings {
     const val KEY_DIALER_SHOW_NAME = "dialer_show_name"        // Boolean, 默认 true（显示名称）
     const val KEY_DIALER_NAME_SINGLE_LINE = "dialer_name_single_line" // Boolean, 默认 false（名称单行）
     const val KEY_DIALER_SHORTCUT_ICON = "dialer_shortcut_icon"  // String, 默认 ""（自定义桌面快捷方式图标 drawable 名；空=默认键盘图标）
+    const val KEY_DIALER_CACHE_ENABLED = "dialer_cache_enabled"   // Boolean, 默认 true（APP Dialer 已装应用持久化缓存总开关）
 
     // ── APP Dialer 独立于全局弹窗的尺寸配置 ──
     const val KEY_DIALER_MARGIN_H = "dialer_margin_horizontal"   // dp, 默认 28（弹窗水平边距，独立于全局）
@@ -86,6 +87,11 @@ object DialogSettings {
     fun getDialerShortcutIconName(ctx: Context): String = prefs(ctx).getString(KEY_DIALER_SHORTCUT_ICON, "") ?: ""
     fun setDialerShortcutIconName(ctx: Context, v: String) =
         prefs(ctx).edit().putString(KEY_DIALER_SHORTCUT_ICON, v).apply()
+
+    /** APP Dialer 已装应用持久化缓存总开关：开启后把图标+名称+拼音落盘，进程被杀后下次打开秒显 */
+    fun isDialerCacheEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_DIALER_CACHE_ENABLED, true)
+    fun setDialerCacheEnabled(ctx: Context, v: Boolean) =
+        prefs(ctx).edit().putBoolean(KEY_DIALER_CACHE_ENABLED, v).apply()
 
     /** 键盘模式：返回 "t9" 或 "qwerty" */
     fun getKeyboardMode(ctx: Context): String {

@@ -32,6 +32,7 @@ import com.fengnian.folderdrawer.util.AppSearchEntry
 import com.fengnian.folderdrawer.util.AppUtils
 import com.fengnian.folderdrawer.util.BackgroundHelper
 import com.fengnian.folderdrawer.util.DialogSettings
+import com.fengnian.folderdrawer.util.DialerCacheStore
 import com.fengnian.folderdrawer.util.T9KeyboardHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,28 +114,38 @@ class AppDialerActivity : AppCompatActivity() {
 
     // ===== 数据加载 =====
     private fun loadApps() {
-        // 先命中缓存：秒显（不阻塞 UI），打开即可见、即可搜
-        DialerAppCache.entries?.let { cached ->
-            allEntries = cached
-            renderInitialOrCurrent()
-        }
-        // 后台刷新（捕获新装/卸载应用、图标包变化），完成后更新缓存并重渲
-        lifecycleScope.launch {
-            val iconPm = iconPackManager
-            val entries = withContext(Dispatchers.IO) {
-                AppUtils.getInstalledApps(applicationContext).map { ia ->
-                    val keys = T9KeyboardHelper.buildSearchKeys(ia.label)
-                    // 套用全局激活的图标包（与抽屉图标主题一致）；无图标包时回退系统图标
-                    val themedIcon = iconPm.getIcon(ia.packageName, ia.activityName, ia.label) ?: ia.icon
-                    AppSearchEntry(
-                        ia.packageName, ia.activityName, ia.label, themedIcon,
-                        keys.first, keys.second, keys.third
-                    )
+        val cacheEnabled = DialogSettings.isDialerCacheEnabled(this)
+
+        // 1. 优先秒显：启用缓存时读磁盘（持久化，进程被杀也不丢）；否则用进程内存缓存
+        if (cacheEnabled) {
+            lifecycleScope.launch {
+                // 缓存失效（空表/换图标包）则不秒显旧数据，直接等后台实时构建
+                val stale = withContext(Dispatchers.IO) { DialerCacheStore.isStale(this@AppDialerActivity) }
+                if (!stale) {
+                    val disk = withContext(Dispatchers.IO) { DialerCacheStore.load(this@AppDialerActivity) }
+                    if (disk != null) {
+                        allEntries = disk
+                        DialerAppCache.entries = disk
+                        renderInitialOrCurrent()
+                    }
                 }
             }
+        } else {
+            DialerAppCache.entries?.let { cached ->
+                allEntries = cached
+                renderInitialOrCurrent()
+            }
+        }
+
+        // 2. 后台构建最新列表（捕获期间装卸/图标包变化），完成后更新内存并视情况写盘
+        lifecycleScope.launch {
+            val entries = withContext(Dispatchers.IO) { DialerCacheStore.buildEntries(this@AppDialerActivity) }
             DialerAppCache.entries = entries
             allEntries = entries
             renderInitialOrCurrent()
+            if (cacheEnabled) {
+                withContext(Dispatchers.IO) { DialerCacheStore.save(this@AppDialerActivity, entries) }
+            }
         }
     }
 

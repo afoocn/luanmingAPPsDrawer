@@ -13,6 +13,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.widget.Toolbar
@@ -21,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import com.fengnian.folderdrawer.iconpack.IconPackManager
 import com.fengnian.folderdrawer.util.ColorPickerDialog
 import com.fengnian.folderdrawer.util.DialogSettings
+import com.fengnian.folderdrawer.util.DialerCacheStore
 import com.fengnian.folderdrawer.util.ShortcutHelper
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +81,7 @@ class DialerSettingsActivity : AppCompatActivity() {
     // ==================== 各设置区块 ====================
 
     private fun buildDialerSection() {
+        buildCacheSection()
         val card = addSectionCard()
 
         // 键盘模式
@@ -129,6 +132,47 @@ class DialerSettingsActivity : AppCompatActivity() {
         addSeekBarRow(card, "按键宽度(0自适应)", 0, 96, DialogSettings.getDialerKeyWidth(this), "dp") { DialogSettings.setDialerKeyWidth(this, it) }
         addSeekBarRow(card, "按键行间距", 0, 24, DialogSettings.getDialerKeyRowSpacing(this), "dp") { DialogSettings.setDialerKeyRowSpacing(this, it) }
         addSeekBarRow(card, "按键列间距", 0, 24, DialogSettings.getDialerKeyColSpacing(this), "dp") { DialogSettings.setDialerKeyColSpacing(this, it) }
+    }
+
+    // ==================== 缓存管理 ====================
+
+    private fun buildCacheSection() {
+        val card = addSectionCard()
+        addSwitchRow(card, "启用 APP Dialer 缓存", DialogSettings.isDialerCacheEnabled(this)) { enabled ->
+            DialogSettings.setDialerCacheEnabled(this, enabled)
+            // 关闭开关时一并清掉磁盘缓存，避免留存过时数据
+            if (!enabled) {
+                lifecycleScope.launch(Dispatchers.IO) { DialerCacheStore.clear(this@DialerSettingsActivity) }
+            }
+        }
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 4.dp2px(), 0, 4.dp2px())
+        }
+        btnRow.addView(makeTextButton("更新缓存") { updateCache() })
+        btnRow.addView(makeTextButton("清除缓存") { confirmClearCache() })
+        card.addView(btnRow)
+    }
+
+    private fun updateCache() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { DialerCacheStore.rebuildAndSave(this@DialerSettingsActivity) }
+            Toast.makeText(this@DialerSettingsActivity, "缓存已更新", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun confirmClearCache() {
+        AlertDialog.Builder(this)
+            .setTitle("清除缓存")
+            .setMessage("将删除 APP Dialer 已缓存的应用图标与名称，下次打开会重新读取（可能稍慢）。确定清除？")
+            .setPositiveButton("清除") { _, _ ->
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) { DialerCacheStore.clear(this@DialerSettingsActivity) }
+                    Toast.makeText(this@DialerSettingsActivity, "缓存已清除", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     // ==================== 快捷方式图标 ====================
