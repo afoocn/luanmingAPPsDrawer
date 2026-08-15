@@ -64,6 +64,10 @@ class AppDialerActivity : AppCompatActivity() {
     /** 卡片实际底色是否为浅色：决定文字/按键配色，避免浅底白字看不见 */
     private var cardIsLight = false
 
+    /** 已解码图标的运行时缓存（按 包名|activity 记忆），避免同一图标重复栅格化。
+     *  与缓存懒解码配合：打开时只解码「上次结果」命中的几个图标，其余滚动/输入用到时才解码。 */
+    private val iconDecodeCache = HashMap<String, android.graphics.drawable.Drawable>()
+
     /** 锁屏（息屏）即退出拨号盘弹窗 */
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -116,37 +120,65 @@ class AppDialerActivity : AppCompatActivity() {
     private fun loadApps() {
         val cacheEnabled = DialogSettings.isDialerCacheEnabled(this)
 
-        // 1. 优先秒显：启用缓存时读磁盘（持久化，进程被杀也不丢）；否则用进程内存缓存
-        if (cacheEnabled) {
-            lifecycleScope.launch {
-                // 缓存失效（空表/换图标包）则不秒显旧数据，直接等后台实时构建
-                val stale = withContext(Dispatchers.IO) { DialerCacheStore.isStale(this@AppDialerActivity) }
-                if (!stale) {
-                    val disk = withContext(Dispatchers.IO) { DialerCacheStore.load(this@AppDialerActivity) }
-                    if (disk != null) {
-                        allEntries = disk
-                        DialerAppCache.entries = disk
-                        renderInitialOrCurrent()
-                    }
-                }
-            }
-        } else {
+        if (!cacheEnabled) {
+            // 关闭缓存：进程内存缓存优先，无则实时构建（仅渲染一次，避免重复渲染闪烁）
             DialerAppCache.entries?.let { cached ->
                 allEntries = cached
                 renderInitialOrCurrent()
             }
+            lifecycleScope.launch {
+                val entries = withContext(Dispatchers.IO) { DialerCacheStore.buildEntries(this@AppDialerActivity) }
+                if (DialerAppCache.entries == null || !sameAppSet(entries, allEntries)) {
+                    allEntries = entries
+                    DialerAppCache.entries = entries
+                    renderInitialOrCurrent()
+                } else {
+                    allEntries = entries
+                    DialerAppCache.entries = entries
+                }
+            }
+            return
         }
 
-        // 2. 后台构建最新列表（捕获期间装卸/图标包变化），完成后更新内存并视情况写盘
+        // 启用缓存：磁盘优先，仅渲染一次（不叠加实时渲染，避免「烤图 vs 原生图标」闪烁/割裂）
         lifecycleScope.launch {
-            val entries = withContext(Dispatchers.IO) { DialerCacheStore.buildEntries(this@AppDialerActivity) }
-            DialerAppCache.entries = entries
-            allEntries = entries
-            renderInitialOrCurrent()
-            if (cacheEnabled) {
-                withContext(Dispatchers.IO) { DialerCacheStore.save(this@AppDialerActivity, entries) }
+            val stale = withContext(Dispatchers.IO) { DialerCacheStore.isStale(this@AppDialerActivity) }
+            val disk = if (!stale) withContext(Dispatchers.IO) { DialerCacheStore.load(this@AppDialerActivity) } else null
+            if (disk != null) {
+                // 1) 立即秒显缓存（仅此一次渲染，图标按当前「图标大小」设置经 FIT_CENTER 适应）
+                allEntries = disk
+                DialerAppCache.entries = disk
+                renderInitialOrCurrent()
+
+                // 2) 轻量判断是否有新装/卸 App：无变化则完全不读实时图标（开屏即适应、无闪烁）
+                val installedKeys = withContext(Dispatchers.IO) { AppUtils.getInstalledAppKeys(this@AppDialerActivity) }
+                val cachedKeys = disk.map { it.packageName + "|" + it.activityName }.toSet()
+                if (installedKeys != cachedKeys) {
+                    // 有变化：实时重建 + 写盘 + 仅在此重渲（新 App 出现，非同款图标闪烁）
+                    val fresh = withContext(Dispatchers.IO) { DialerCacheStore.buildEntries(this@AppDialerActivity) }
+                    allEntries = fresh
+                    DialerAppCache.entries = fresh
+                    renderInitialOrCurrent()
+                    withContext(Dispatchers.IO) { DialerCacheStore.save(this@AppDialerActivity, fresh) }
+                }
+                // 无变化：不读实时图标、不重建，缓存保持
+            } else {
+                // 缓存为空或失效（如刚换图标包）：实时构建并写盘，仅渲染一次
+                val fresh = withContext(Dispatchers.IO) { DialerCacheStore.buildEntries(this@AppDialerActivity) }
+                allEntries = fresh
+                DialerAppCache.entries = fresh
+                renderInitialOrCurrent()
+                withContext(Dispatchers.IO) { DialerCacheStore.save(this@AppDialerActivity, fresh) }
             }
         }
+    }
+
+    /** 两个列表的「包名|activity」集合是否一致（用于判断是否需要重渲，避免无变化时的闪烁） */
+    private fun sameAppSet(a: List<AppSearchEntry>, b: List<AppSearchEntry>): Boolean {
+        if (a.size != b.size) return false
+        val setA = a.mapTo(LinkedHashSet()) { it.packageName + "|" + it.activityName }
+        val setB = b.mapTo(LinkedHashSet()) { it.packageName + "|" + it.activityName }
+        return setA == setB
     }
 
     // ===== 输入处理 =====
@@ -259,7 +291,7 @@ class AppDialerActivity : AppCompatActivity() {
             val iconView = ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                setImageDrawable(entry.icon)
+                setImageDrawable(resolveIcon(entry))
             }
             item.addView(iconView)
             if (showName) {
@@ -279,6 +311,21 @@ class AppDialerActivity : AppCompatActivity() {
             }
             binding.resultContainer.addView(item)
         }
+    }
+
+    /**
+     * 懒解码图标：优先用已解码缓存；其次用 entry 的实时 Drawable（实时构建路径）；
+     * 否则把持久化缓存的图标字节 [AppSearchEntry.iconBlob] 按需解码并记入缓存。
+     * 这样打开时只解码「上次结果」命中的几个图标，全量几百个图标不被一次性解码，做到随开随展示。
+     */
+    private fun resolveIcon(entry: AppSearchEntry): android.graphics.drawable.Drawable {
+        val key = entry.packageName + "|" + entry.activityName
+        iconDecodeCache[key]?.let { return it }
+        val d = entry.icon
+            ?: entry.iconBlob?.let { DialerCacheStore.bytesToDrawable(this, it) }
+            ?: android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+        iconDecodeCache[key] = d
+        return d
     }
 
     private fun launchApp(entry: AppSearchEntry) {

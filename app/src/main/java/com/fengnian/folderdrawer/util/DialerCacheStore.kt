@@ -53,7 +53,9 @@ object DialerCacheStore {
                 pinyinFull = e.pinyinFull,
                 pinyinInitials = e.pinyinInitials,
                 labelLower = e.labelLower,
-                iconBlob = drawableToBytes(context, e.icon),
+                // 优先复用已落盘的字节（来自上次 load 的 iconBlob），避免对已解码的图标重复栅格化；
+                // 实时构建的条目则把其 Drawable 栅格化为字节。
+                iconBlob = e.iconBlob ?: (e.icon?.let { drawableToBytes(context, it) } ?: ByteArray(0)),
                 iconPackId = activePack
             )
         }
@@ -64,7 +66,8 @@ object DialerCacheStore {
 
     /**
      * 读盘还原条目。返回 null 表示缓存为空（需实时构建）。
-     * 图标 Blob 解码为 BitmapDrawable 还原。
+     * 注意：此处**不做图标解码**——仅把 Room BLOB 原样挂到 [AppSearchEntry.iconBlob]，
+     * 图标由渲染层按需懒解码（打开时只解码「上次结果」命中的几个，而非全部），实现随开随展示。
      */
     suspend fun load(context: Context): List<AppSearchEntry>? = withContext(Dispatchers.IO) {
         val rows = AppDatabase.get(context).dialerCacheDao().getAll()
@@ -72,8 +75,9 @@ object DialerCacheStore {
         rows.map { r ->
             AppSearchEntry(
                 r.packageName, r.activityName, r.label,
-                bytesToDrawable(context, r.iconBlob),
-                r.pinyinFull, r.pinyinInitials, r.labelLower
+                null,
+                r.pinyinFull, r.pinyinInitials, r.labelLower,
+                iconBlob = r.iconBlob
             )
         }
     }
@@ -117,7 +121,7 @@ object DialerCacheStore {
         return stream.toByteArray()
     }
 
-    private fun bytesToDrawable(context: Context, bytes: ByteArray): Drawable {
+    internal fun bytesToDrawable(context: Context, bytes: ByteArray): Drawable {
         val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         // 修正位图密度，使 BitmapDrawable 与设备密度 1:1，显示缩放像素精确、不被二次拉伸

@@ -160,8 +160,11 @@ data class AppSearchEntry(
     val packageName: String,
     val activityName: String,
     val label: String,
-    val icon: Drawable,
+    val icon: Drawable? = null,
     val pinyinFull: String,
     val pinyinInitials: String,
-    val labelLower: String
+    val labelLower: String,
+    /** 持久化缓存的图标字节（来自 Room BLOB）。为 null 时图标直接用 [icon] 实时 Drawable。
+     *  渲染层按需懒解码此处字节，避免打开时一次性解码全部图标。 */
+    val iconBlob: ByteArray? = null
 )

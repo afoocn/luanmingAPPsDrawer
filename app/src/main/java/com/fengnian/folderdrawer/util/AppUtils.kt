@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
+import android.os.Build
 
 data class InstalledApp(
     val packageName: String,
@@ -37,6 +38,27 @@ object AppUtils {
                 icon = ri.loadIcon(pm)
             )
         }.sortedBy { it.label.lowercase() }
+    }
+
+    /**
+     * 轻量获取已装 App 的「包名|activity」键集合（不取图标/名称，开销极小），
+     * 用于快速判断是否需要重建拨号盘缓存（新装/卸载 App）。
+     */
+    fun getInstalledAppKeys(context: Context): Set<String> {
+        val pm = context.packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val resolveList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.queryIntentActivities(mainIntent, PackageManager.ResolveInfoFlags.of(0L))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.queryIntentActivities(mainIntent, 0)
+        }
+        val set = LinkedHashSet<String>()
+        for (ri in resolveList) {
+            val ai = ri.activityInfo ?: continue
+            set.add(ai.packageName + "|" + ai.name)
+        }
+        return set
     }
 
     /**

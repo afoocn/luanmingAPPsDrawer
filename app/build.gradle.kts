@@ -12,8 +12,8 @@ android {
         applicationId = "com.fengnian.folderdrawer"
         minSdk = 30
         targetSdk = 34
-        versionCode = 123
-        versionName = "2.38"
+        versionCode = 125
+        versionName = "2.40"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
